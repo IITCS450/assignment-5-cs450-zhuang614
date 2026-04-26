@@ -1,7 +1,22 @@
-The user-level threading system uses a fixed thread table where each thread has its own stack, state, and saved context. The main thread starts as RUNNING, while others are initially FREE.
+Implemented cooperative user-level threads and a simple mutex in xv6 user space.
 
-thread_create() allocates a stack and sets up thread_stub, which runs the function and marks the thread as ZOMBIE when done. uswtch() handles context switching by saving and restoring thread contexts.
+Context switching
+- Fixed thread table with states FREE, RUNNABLE, RUNNING, ZOMBIE.
+- thread_create allocates a 4 KB stack and initializes context to start at thread_stub.
+- thread_stub runs fn(arg), marks ZOMBIE, then yields.
+- uswtch saves/restores thread context during switches.
 
-Scheduling is cooperative and round-robin via thread_yield(), which switches to the next RUNNABLE thread. thread_join() waits for completion, then frees the thread’s resources.
+Scheduling and join
+- Cooperative round-robin via thread_yield.
+- thread_join yields until target is ZOMBIE, then frees its stack and resets slot state.
 
-Overall, the system implements user-level threads using manual context switching and cooperative scheduling without kernel support.
+Mutex and demo
+- mutex_lock cooperatively spins with thread_yield; mutex_unlock clears lock.
+- test_pc uses 2 producers + 1 consumer on a bounded buffer protected by the mutex.
+- Run completes with final done message, indicating no deadlock and consistent buffer updates.
+
+Limitations
+- Max threads: 16 total (including main).
+- Stack size: 4096 bytes per thread.
+- Non-preemptive scheduling; fairness depends on explicit yields.
+- Mutex has no queueing/ownership checks.
